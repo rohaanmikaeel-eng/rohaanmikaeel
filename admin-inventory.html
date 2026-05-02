@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RMG Admin — Vehicle Management</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --red: #C8102E; --red-d: #8B0A1E; --red-l: #ff2d4e;
+  --black: #0A0A0A; --dark: #1E1E1E; --mid: #555; --light: #F5F5F5; --cream: #FAFAF8; --white: #fff;
+  --green: #16a34a; --orange: #ea580c; --blue: #1d4ed8;
+  --font-d: 'Cormorant Garamond', serif; --font-b: 'DM Sans', sans-serif;
+  --r: 8px; --shadow: 0 4px 24px rgba(0,0,0,0.08);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: var(--font-b); background: #f0f2f5; color: var(--black); }
+
+/* ====== TABS ====== */
+.tabs { display:flex; background: var(--black); padding: 0 24px; gap:0; position:sticky; top:0; z-index:100; }
+.tab-btn { padding: 18px 28px; font-size:13px; font-weight:600; letter-spacing:1px; text-transform:uppercase; color:rgba(255,255,255,0.45); cursor:pointer; border:none; background:none; border-bottom:2px solid transparent; transition:all 0.2s; }
+.tab-btn.active { color:white; border-bottom-color:var(--red); }
+.tab-btn:hover { color:rgba(255,255,255,0.8); }
+.tab-content { display:none; }
+.tab-content.active { display:block; }
+
+/* ====== ADMIN HEADER ====== */
+.admin-header { background:var(--black); padding:32px 32px 24px; border-bottom:1px solid rgba(255,255,255,0.06); }
+.admin-header h1 { font-family:var(--font-d); font-size:28px; color:white; margin-bottom:4px; }
+.admin-header p { font-size:13px; color:rgba(255,255,255,0.4); }
+
+/* ====== STATS ====== */
+.stats-row { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; padding:24px 32px; }
+.stat-card { background:white; border-radius:var(--r); padding:20px 24px; box-shadow:var(--shadow); border-left:3px solid var(--red); }
+.stat-card .num { font-family:var(--font-d); font-size:32px; font-weight:700; color:var(--black); }
+.stat-card .lbl { font-size:11px; font-weight:600; letter-spacing:1.5px; text-transform:uppercase; color:var(--mid); margin-top:4px; }
+
+/* ====== ADD FORM ====== */
+.add-section { padding:0 32px 32px; }
+.card { background:white; border-radius:var(--r); box-shadow:var(--shadow); overflow:hidden; }
+.card-header { padding:20px 28px; border-bottom:1px solid var(--light); display:flex; align-items:center; justify-content:space-between; }
+.card-header h2 { font-family:var(--font-d); font-size:22px; font-weight:600; }
+.card-header .badge { background:rgba(200,16,46,0.08); color:var(--red); font-size:11px; font-weight:700; letter-spacing:1px; padding:5px 12px; border-radius:50px; text-transform:uppercase; }
+.form-body { padding:28px; }
+.form-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+.form-grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:20px; }
+.form-full { grid-column:1/-1; }
+.fg { display:flex; flex-direction:column; gap:6px; }
+.fg label { font-size:11px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:var(--mid); }
+.fg input, .fg select, .fg textarea {
+  padding:11px 14px; border:1.5px solid rgba(0,0,0,0.1); border-radius:6px;
+  font-size:14px; font-family:var(--font-b); color:var(--black); transition:all 0.2s;
+  background:white;
+}
+.fg input:focus, .fg select:focus, .fg textarea:focus { outline:none; border-color:var(--red); box-shadow:0 0 0 3px rgba(200,16,46,0.06); }
+.fg textarea { resize:vertical; min-height:80px; }
+.fg select { appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23555' fill='none' stroke-width='1.5'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 12px center; padding-right:32px; }
+
+/* Image upload */
+.img-upload-area { border:2px dashed rgba(200,16,46,0.3); border-radius:var(--r); padding:32px; text-align:center; cursor:pointer; transition:all 0.2s; background:rgba(200,16,46,0.02); position:relative; }
+.img-upload-area:hover { border-color:var(--red); background:rgba(200,16,46,0.04); }
+.img-upload-area input[type=file] { position:absolute; inset:0; opacity:0; cursor:pointer; }
+.img-upload-area .upload-icon { font-size:36px; margin-bottom:8px; }
+.img-upload-area p { font-size:13px; color:var(--mid); }
+.img-upload-area strong { color:var(--red); }
+.img-previews { display:flex; gap:10px; flex-wrap:wrap; margin-top:14px; }
+.img-preview-item { position:relative; width:100px; height:75px; border-radius:6px; overflow:hidden; border:1px solid rgba(0,0,0,0.1); }
+.img-preview-item img { width:100%; height:100%; object-fit:cover; }
+.img-preview-item .del-img { position:absolute; top:3px; right:3px; background:rgba(0,0,0,0.7); color:white; border:none; border-radius:50%; width:18px; height:18px; font-size:10px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+.img-primary-badge { position:absolute; bottom:3px; left:3px; background:var(--red); color:white; font-size:9px; font-weight:700; padding:2px 5px; border-radius:3px; }
+
+/* Highlights checkboxes */
+.highlights-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+.hl-check { display:flex; align-items:center; gap:8px; padding:10px 12px; border:1.5px solid rgba(0,0,0,0.08); border-radius:6px; cursor:pointer; transition:all 0.2s; }
+.hl-check:hover { border-color:var(--red); }
+.hl-check input[type=checkbox] { width:15px; height:15px; accent-color:var(--red); cursor:pointer; }
+.hl-check span { font-size:12px; font-weight:500; }
+
+/* Form actions */
+.form-actions { display:flex; gap:12px; padding:20px 28px; border-top:1px solid var(--light); }
+.btn-save { background:var(--red); color:white; padding:12px 32px; font-size:13px; font-weight:700; letter-spacing:1px; text-transform:uppercase; border:none; border-radius:6px; cursor:pointer; transition:all 0.2s; }
+.btn-save:hover { background:var(--red-d); transform:translateY(-1px); }
+.btn-reset { background:var(--light); color:var(--mid); padding:12px 24px; font-size:13px; font-weight:600; border:none; border-radius:6px; cursor:pointer; }
+.btn-reset:hover { background:#e5e5e5; }
+.btn-preview { background:var(--dark); color:white; padding:12px 24px; font-size:13px; font-weight:600; border:none; border-radius:6px; cursor:pointer; }
+
+/* ====== MANAGE TABLE ====== */
+.manage-section { padding:0 32px 32px; }
+.manage-tools { padding:20px 28px; border-bottom:1px solid var(--light); display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+.search-box { flex:1; min-width:200px; padding:10px 14px; border:1.5px solid rgba(0,0,0,0.1); border-radius:6px; font-size:14px; font-family:var(--font-b); }
+.search-box:focus { outline:none; border-color:var(--red); }
+.filter-select { padding:10px 14px; border:1.5px solid rgba(0,0,0,0.1); border-radius:6px; font-size:13px; font-family:var(--font-b); appearance:none; cursor:pointer; min-width:130px; }
+.filter-select:focus { outline:none; border-color:var(--red); }
+.manage-count { font-size:13px; color:var(--mid); margin-left:auto; }
+
+.listings-table { width:100%; border-collapse:collapse; }
+.listings-table th { padding:12px 16px; font-size:11px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:var(--mid); text-align:left; border-bottom:1px solid var(--light); background:var(--cream); }
+.listings-table td { padding:14px 16px; font-size:13px; border-bottom:1px solid rgba(0,0,0,0.05); vertical-align:middle; }
+.listings-table tr:hover td { background:rgba(200,16,46,0.02); }
+.tbl-img { width:72px; height:50px; object-fit:cover; border-radius:5px; border:1px solid rgba(0,0,0,0.08); }
+.tbl-img-placeholder { width:72px; height:50px; background:var(--light); border-radius:5px; display:flex; align-items:center; justify-content:center; font-size:20px; }
+.car-title-cell strong { font-size:14px; font-weight:600; color:var(--black); display:block; }
+.car-title-cell span { font-size:12px; color:var(--mid); }
+.status-badge { padding:4px 10px; border-radius:50px; font-size:11px; font-weight:700; letter-spacing:0.5px; }
+.status-active { background:#dcfce7; color:var(--green); }
+.status-sold { background:#fef3c7; color:#92400e; }
+.status-pending { background:#e0f2fe; color:#0369a1; }
+.tbl-actions { display:flex; gap:8px; }
+.btn-edit { background:#f0f9ff; color:var(--blue); border:1px solid #bfdbfe; padding:6px 14px; border-radius:5px; font-size:12px; font-weight:600; cursor:pointer; transition:all 0.2s; }
+.btn-edit:hover { background:#dbeafe; }
+.btn-delete { background:#fff1f2; color:var(--red); border:1px solid #fecdd3; padding:6px 14px; border-radius:5px; font-size:12px; font-weight:600; cursor:pointer; transition:all 0.2s; }
+.btn-delete:hover { background:#ffe4e6; }
+.btn-toggle { background:#f0fdf4; color:var(--green); border:1px solid #bbf7d0; padding:6px 14px; border-radius:5px; font-size:12px; font-weight:600; cursor:pointer; transition:all 0.2s; }
+
+/* Empty state */
+.empty-state { text-align:center; padding:80px 20px; }
+.empty-state .icon { font-size:56px; margin-bottom:16px; }
+.empty-state h3 { font-family:var(--font-d); font-size:24px; color:var(--dark); margin-bottom:8px; }
+.empty-state p { font-size:14px; color:var(--mid); }
+
+/* ====== PUBLIC INVENTORY ====== */
+.pub-header { background:var(--black); padding:28px 32px; display:flex; align-items:center; justify-content:space-between; }
+.pub-header h1 { font-family:var(--font-d); font-size:24px; color:white; }
+.pub-header p { font-size:12px; color:rgba(255,255,255,0.4); margin-top:2px; }
+.pub-filters { background:white; padding:18px 28px; border-bottom:1px solid var(--light); display:flex; gap:12px; flex-wrap:wrap; align-items:center; box-shadow:var(--shadow); }
+.pub-search { flex:1; min-width:200px; padding:10px 14px; border:1.5px solid rgba(0,0,0,0.1); border-radius:6px; font-size:14px; font-family:var(--font-b); }
+.pub-search:focus { outline:none; border-color:var(--red); }
+.pub-fselect { padding:10px 14px; border:1.5px solid rgba(0,0,0,0.1); border-radius:6px; font-size:13px; font-family:var(--font-b); cursor:pointer; appearance:none; min-width:120px; }
+.pub-results { padding:28px 32px; }
+.pub-results-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
+.pub-results-header span { font-size:13px; color:var(--mid); }
+.pub-sort { padding:8px 12px; border:1px solid rgba(0,0,0,0.1); border-radius:6px; font-size:12px; font-family:var(--font-b); cursor:pointer; }
+.pub-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:20px; }
+.pub-card { background:white; border-radius:var(--r); border:1px solid rgba(0,0,0,0.07); overflow:hidden; box-shadow:var(--shadow); transition:all 0.3s; cursor:pointer; }
+.pub-card:hover { transform:translateY(-4px); box-shadow:0 16px 48px rgba(0,0,0,0.12); }
+.pub-card-img { height:200px; overflow:hidden; position:relative; background:var(--light); }
+.pub-card-img img { width:100%; height:100%; object-fit:cover; transition:transform 0.4s; }
+.pub-card:hover .pub-card-img img { transform:scale(1.04); }
+.pub-card-imgs-count { position:absolute; bottom:8px; right:8px; background:rgba(0,0,0,0.6); color:white; font-size:11px; font-weight:600; padding:4px 9px; border-radius:5px; }
+.pub-badge { position:absolute; top:10px; left:10px; font-size:10px; font-weight:700; letter-spacing:1px; padding:5px 10px; border-radius:3px; text-transform:uppercase; }
+.pub-badge.new { background:var(--red); color:white; }
+.pub-badge.used { background:var(--dark); color:white; }
+.pub-badge.sold { background:#92400e; color:white; }
+.pub-card-body { padding:18px 20px; }
+.pub-card-make { font-size:10px; font-weight:700; letter-spacing:2px; color:var(--red); text-transform:uppercase; margin-bottom:4px; }
+.pub-card-name { font-family:var(--font-d); font-size:20px; font-weight:600; color:var(--black); margin-bottom:10px; line-height:1.2; }
+.pub-specs { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
+.pub-spec { font-size:11px; color:var(--mid); background:var(--light); padding:4px 9px; border-radius:4px; }
+.pub-card-footer { display:flex; align-items:center; justify-content:space-between; padding-top:14px; border-top:1px solid var(--light); }
+.pub-price { font-family:var(--font-d); font-size:22px; font-weight:700; color:var(--black); }
+.pub-price small { font-size:11px; color:var(--mid); font-weight:400; }
+.pub-wa { background:#25D366; color:white; border:none; padding:8px 14px; border-radius:5px; font-size:12px; font-weight:600; cursor:pointer; transition:all 0.2s; text-decoration:none; display:inline-flex; align-items:center; gap:5px; }
+.pub-wa:hover { background:#1da851; transform:translateY(-1px); }
+
+/* ====== MODAL (Vehicle Detail) ====== */
+.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:1000; display:none; align-items:flex-start; justify-content:center; overflow-y:auto; padding:20px; backdrop-filter:blur(4px); }
+.modal-overlay.open { display:flex; }
+.modal { background:white; border-radius:12px; max-width:960px; width:100%; overflow:hidden; animation:slideUp 0.3s ease; }
+.modal-gallery { position:relative; background:#111; }
+.modal-main-img { width:100%; height:400px; object-fit:cover; display:block; cursor:pointer; }
+.modal-thumbs { display:flex; gap:6px; padding:10px; overflow-x:auto; background:#1a1a1a; }
+.modal-thumb { width:80px; height:56px; object-fit:cover; border-radius:4px; cursor:pointer; opacity:0.6; transition:all 0.2s; flex-shrink:0; }
+.modal-thumb.active, .modal-thumb:hover { opacity:1; outline:2px solid var(--red); }
+.modal-body { display:grid; grid-template-columns:1fr 300px; gap:0; }
+.modal-info { padding:32px; }
+.modal-make { font-size:11px; font-weight:700; letter-spacing:2px; color:var(--red); text-transform:uppercase; margin-bottom:6px; }
+.modal-title { font-family:var(--font-d); font-size:32px; font-weight:600; color:var(--black); margin-bottom:8px; }
+.modal-desc { font-size:14px; color:var(--mid); line-height:1.7; margin:16px 0; }
+.modal-specs-table { width:100%; border-collapse:collapse; margin:20px 0; }
+.modal-specs-table tr { border-bottom:1px solid var(--light); }
+.modal-specs-table td { padding:10px 0; font-size:13px; }
+.modal-specs-table td:first-child { color:var(--mid); width:45%; }
+.modal-specs-table td:last-child { font-weight:600; }
+.modal-highlights { display:flex; flex-wrap:wrap; gap:8px; margin-top:16px; }
+.modal-hl { background:rgba(200,16,46,0.06); border:1px solid rgba(200,16,46,0.15); color:var(--red); font-size:11px; font-weight:600; padding:5px 12px; border-radius:50px; }
+.modal-sidebar { background:var(--cream); padding:32px; border-left:1px solid rgba(0,0,0,0.07); }
+.modal-price { font-family:var(--font-d); font-size:40px; font-weight:700; color:var(--black); margin-bottom:4px; }
+.modal-price-note { font-size:12px; color:var(--mid); margin-bottom:24px; }
+.modal-actions { display:flex; flex-direction:column; gap:10px; }
+.modal-btn-primary { background:var(--red); color:white; padding:14px; text-align:center; font-size:13px; font-weight:700; letter-spacing:1px; text-transform:uppercase; border:none; border-radius:6px; cursor:pointer; transition:all 0.2s; }
+.modal-btn-primary:hover { background:var(--red-d); }
+.modal-btn-wa { background:#25D366; color:white; padding:13px; text-align:center; font-size:13px; font-weight:600; border:none; border-radius:6px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; text-decoration:none; transition:all 0.2s; }
+.modal-btn-wa:hover { background:#1da851; }
+.modal-trust { margin-top:24px; padding-top:20px; border-top:1px solid rgba(0,0,0,0.07); }
+.modal-trust p { font-size:13px; color:var(--mid); line-height:2; }
+.modal-close { position:absolute; top:12px; right:12px; background:rgba(0,0,0,0.6); color:white; border:none; width:36px; height:36px; border-radius:50%; font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center; z-index:10; transition:all 0.2s; }
+.modal-close:hover { background:var(--red); }
+
+/* ====== TOAST ====== */
+.toast { position:fixed; bottom:24px; right:24px; background:var(--dark); color:white; padding:14px 20px; border-radius:8px; font-size:14px; font-weight:500; box-shadow:0 8px 32px rgba(0,0,0,0.2); z-index:9999; transform:translateY(80px); opacity:0; transition:all 0.3s; display:flex; align-items:center; gap:10px; }
+.toast.show { transform:translateY(0); opacity:1; }
+.toast.success { border-left:3px solid #22c55e; }
+.toast.error { border-left:3px solid var(--red); }
+
+/* Confirm dialog */
+.confirm-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:2000; display:none; align-items:center; justify-content:center; }
+.confirm-overlay.open { display:flex; }
+.confirm-box { background:white; border-radius:12px; padding:32px; max-width:380px; width:90%; text-align:center; box-shadow:0 24px 80px rgba(0,0,0,0.2); }
+.confirm-box h3 { font-family:var(--font-d); font-size:22px; margin-bottom:10px; }
+.confirm-box p { font-size:14px; color:var(--mid); margin-bottom:24px; }
+.confirm-btns { display:flex; gap:10px; justify-content:center; }
+.btn-confirm-yes { background:var(--red); color:white; padding:10px 28px; border:none; border-radius:6px; font-size:13px; font-weight:700; cursor:pointer; }
+.btn-confirm-no { background:var(--light); color:var(--dark); padding:10px 28px; border:none; border-radius:6px; font-size:13px; font-weight:600; cursor:pointer; }
+
+@keyframes slideUp { from { opacity:0; transform:translateY(24px); } to { opacity:1; transform:translateY(0); } }
+
+@media (max-width:768px) {
+  .stats-row { grid-template-columns:1fr 1fr; }
+  .form-grid, .form-grid-3 { grid-template-columns:1fr; }
+  .highlights-grid { grid-template-columns:1fr 1fr; }
+  .add-section, .manage-section, .pub-results { padding:0 16px 24px; }
+  .manage-tools { padding:16px; }
+  .modal-body { grid-template-columns:1fr; }
+  .modal-main-img { height:260px; }
+  .listings-table { font-size:12px; }
+}
+</style>
+</head>
+<body>
+
+<!-- TAB NAV -->
+<div class="tabs">
+  <div style="display:flex;align-items:center;padding:0 16px 0 0;border-right:1px solid rgba(255,255,255,0.08);margin-right:16px">
+    <div style="width:32px;height:32px;background:var(--red);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px">⚙</div>
+    <span style="color:white;font-size:12px;font-weight:700;letter-spacing:1px;margin-left:10px;white-space:nowrap">RMG ADMIN</span>
+  </div>
+  <button class="tab-btn active" onclick="switchTab('add')">➕ Add Vehicle</button>
+  <button class="tab-btn" onclick="switchTab('manage')">📋 Manage Listings</button>
+  <button class="tab-btn" onclick="switchTab('public')">🌐 Public View</button>
+  <div style="margin-left:auto;padding:0 16px;display:flex;align-items:center;gap:8px">
+    <span id="total-badge" style="background:rgba(200,16,46,0.8);color:white;font-size:11px;font-weight:700;padding:4px 10px;border-radius:50px">0 Listed</span>
+    <a href="index.html" target="_blank" style="background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.6);font-size:11px;font-weight:600;padding:6px 14px;border-radius:6px;text-decoration:none;letter-spacing:0.5px">🌍 Main Site</a>
+  </div>
+</div>
+
+<!-- ============ ADD VEHICLE TAB ============ -->
+<div class="tab-content active" id="tab-add">
+  <div class="admin-header">
+    <h1>Add New Vehicle Listing</h1>
+    <p>Fill in all details — they will appear instantly on the public inventory page</p>
+  </div>
+  <div class="stats-row">
+    <div class="stat-card"><div class="num" id="stat-total">0</div><div class="lbl">Total Listed</div></div>
+    <div class="stat-card" style="border-left-color:#16a34a"><div class="num" id="stat-active">0</div><div class="lbl">Active</div></div>
+    <div class="stat-card" style="border-left-color:#92400e"><div class="num" id="stat-sold">0</div><div class="lbl">Sold</div></div>
+    <div class="stat-card" style="border-left-color:#1d4ed8"><div class="num" id="stat-new">0</div><div class="lbl">New Vehicles</div></div>
+  </div>
+  <div class="add-section">
+    <div class="card">
+      <div class="card-header"><h2>Vehicle Information</h2><span class="badge">New Listing</span></div>
+      <div class="form-body">
+
+        <!-- BASIC INFO -->
+        <div style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--red);margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid var(--light)">📦 Basic Information</div>
+        <div class="form-grid" style="margin-bottom:20px">
+          <div class="fg"><label>Make / Brand *</label><select id="f-make"><option value="">Select Brand</option><option>Toyota</option><option>Lexus</option><option>Honda</option><option>Nissan</option><option>Mitsubishi</option><option>Mazda</option><option>Suzuki</option><option>Ford</option><option>Chevrolet</option><option>GMC</option><option>Dodge</option><option>Jeep</option><option>RAM</option><option>BMW</option><option>Mercedes-Benz</option><option>Audi</option><option>Volkswagen</option><option>Hyundai</option><option>Kia</option><option>Subaru</option><option>Komatsu</option><option>Caterpillar</option><option>Hitachi</option><option>Other</option></select></div>
+          <div class="fg"><label>Custom Brand (if Other)</label><input type="text" id="f-make-custom" placeholder="e.g. Land Rover, Isuzu..."></div>
+          <div class="fg"><label>Model Name *</label><input type="text" id="f-model" placeholder="e.g. Land Cruiser 200, Prado VXL..."></div>
+          <div class="fg"><label>Year *</label><input type="number" id="f-year" placeholder="e.g. 2023" min="1990" max="2026"></div>
+          <div class="fg"><label>Vehicle Type *</label><select id="f-type"><option value="">Select Type</option><option>SUV</option><option>Sedan</option><option>Hatchback</option><option>Coupe</option><option>Convertible</option><option>Pickup Truck</option><option>Van / Minivan</option><option>Station Wagon</option><option>Hybrid</option><option>Electric</option><option>Heavy Machinery</option><option>Bus / Coaster</option><option>Truck / Commercial</option></select></div>
+          <div class="fg"><label>Condition *</label><select id="f-cond"><option value="">Select</option><option>New</option><option>Used — Excellent</option><option>Used — Good</option><option>Used — Fair</option></select></div>
+          <div class="fg"><label>Stock / Reference #</label><input type="text" id="f-stock" placeholder="e.g. RMG-2024-001"></div>
+          <div class="fg"><label>Status</label><select id="f-status"><option value="active">Active — Available</option><option value="pending">Pending — Reserved</option><option value="sold">Sold</option></select></div>
+        </div>
+
+        <!-- ENGINE & SPECS -->
+        <div style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--red);margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid var(--light)">⚙️ Engine & Specifications</div>
+        <div class="form-grid-3" style="margin-bottom:20px">
+          <div class="fg"><label>Engine</label><input type="text" id="f-engine" placeholder="e.g. 4.5L V8 Diesel"></div>
+          <div class="fg"><label>Transmission</label><select id="f-trans"><option value="">Select</option><option>Automatic</option><option>Manual</option><option>CVT</option><option>Semi-Automatic</option><option>Hybrid CVT</option></select></div>
+          <div class="fg"><label>Drive Type</label><select id="f-drive"><option value="">Select</option><option>4WD / 4x4</option><option>AWD</option><option>2WD (FWD)</option><option>2WD (RWD)</option></select></div>
+          <div class="fg"><label>Mileage / Hours</label><input type="text" id="f-mileage" placeholder="e.g. 45,000 miles or 2,300 hrs"></div>
+          <div class="fg"><label>Fuel Type</label><select id="f-fuel"><option value="">Select</option><option>Petrol / Gasoline</option><option>Diesel</option><option>Hybrid</option><option>Electric</option><option>CNG</option></select></div>
+          <div class="fg"><label>Color (Exterior)</label><input type="text" id="f-color" placeholder="e.g. Pearl White, Midnight Black"></div>
+          <div class="fg"><label>Interior Color</label><input type="text" id="f-interior" placeholder="e.g. Beige Leather"></div>
+          <div class="fg"><label>Doors</label><select id="f-doors"><option value="">-</option><option>2</option><option>4</option><option>5</option><option>N/A</option></select></div>
+          <div class="fg"><label>Seats</label><input type="text" id="f-seats" placeholder="e.g. 7 Seater"></div>
+        </div>
+
+        <!-- PRICING -->
+        <div style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--red);margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid var(--light)">💰 Pricing & Export</div>
+        <div class="form-grid" style="margin-bottom:20px">
+          <div class="fg"><label>Price (USD) *</label><input type="text" id="f-price" placeholder="e.g. 45,000"></div>
+          <div class="fg"><label>Price Type</label><select id="f-pricetype"><option>EXW (Ex Works USA)</option><option>FOB (Free on Board)</option><option>CIF (Cost, Insurance, Freight)</option><option>Negotiable</option><option>Contact for Price</option></select></div>
+          <div class="fg"><label>Shipping From Port</label><select id="f-port"><option>Houston, TX</option><option>Baltimore, MD</option><option>Los Angeles, CA</option><option>New York, NJ</option><option>Savannah, GA</option></select></div>
+          <div class="fg"><label>Est. Shipping Cost</label><input type="text" id="f-shipping" placeholder="e.g. $1,200–$2,500 (Africa)"></div>
+        </div>
+
+        <!-- IMAGES -->
+        <div style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--red);margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid var(--light)">📸 Vehicle Photos</div>
+        <div style="margin-bottom:20px">
+          <div class="img-upload-area" onclick="document.getElementById('f-imgs').click()">
+            <input type="file" id="f-imgs" multiple accept="image/*" onchange="handleImages(this)">
+            <div class="upload-icon">📸</div>
+            <p><strong>Click to upload photos</strong> or drag & drop here</p>
+            <p style="margin-top:6px;font-size:12px">First image will be the main cover photo. Max 10 images. JPG, PNG, WebP.</p>
+          </div>
+          <div class="img-previews" id="imgPreviews"></div>
+        </div>
+
+        <!-- IMAGE URL OPTION -->
+        <div style="margin-bottom:20px">
+          <div class="fg form-full"><label>Or Enter Image URLs (one per line)</label><textarea id="f-img-urls" placeholder="https://example.com/car1.jpg&#10;https://example.com/car2.jpg&#10;(You can paste direct image links from any website)" style="min-height:80px"></textarea></div>
+        </div>
+
+        <!-- DESCRIPTION -->
+        <div style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--red);margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid var(--light)">📝 Description & Features</div>
+        <div class="form-grid" style="margin-bottom:20px">
+          <div class="fg form-full"><label>Vehicle Description</label><textarea id="f-desc" placeholder="Describe the vehicle — condition, service history, any modifications, reason for sale..." style="min-height:100px"></textarea></div>
+        </div>
+
+        <!-- HIGHLIGHTS -->
+        <div style="margin-bottom:8px;font-size:13px;font-weight:600;color:var(--dark)">Key Features / Highlights</div>
+        <div class="highlights-grid" style="margin-bottom:24px">
+          <label class="hl-check"><input type="checkbox" value="Sunroof / Moonroof"><span>☀️ Sunroof</span></label>
+          <label class="hl-check"><input type="checkbox" value="4WD / All Terrain"><span>🏔️ 4WD / AWD</span></label>
+          <label class="hl-check"><input type="checkbox" value="Leather Seats"><span>🪑 Leather Seats</span></label>
+          <label class="hl-check"><input type="checkbox" value="Navigation System"><span>🗺️ Navigation</span></label>
+          <label class="hl-check"><input type="checkbox" value="Backup Camera"><span>📷 Backup Camera</span></label>
+          <label class="hl-check"><input type="checkbox" value="Bluetooth / Apple CarPlay"><span>📱 CarPlay/BT</span></label>
+          <label class="hl-check"><input type="checkbox" value="Third Row Seating"><span>👨‍👩‍👧‍👦 3rd Row</span></label>
+          <label class="hl-check"><input type="checkbox" value="Tow Package"><span>🔗 Tow Package</span></label>
+          <label class="hl-check"><input type="checkbox" value="Heated Seats"><span>🔥 Heated Seats</span></label>
+          <label class="hl-check"><input type="checkbox" value="Cruise Control"><span>🚗 Cruise Control</span></label>
+          <label class="hl-check"><input type="checkbox" value="Low Mileage"><span>⭐ Low Mileage</span></label>
+          <label class="hl-check"><input type="checkbox" value="Full Service History"><span>📋 Service History</span></label>
+          <label class="hl-check"><input type="checkbox" value="Export Ready — Title Available"><span>✅ Export Ready</span></label>
+          <label class="hl-check"><input type="checkbox" value="No Accident History"><span>🛡️ No Accidents</span></label>
+          <label class="hl-check"><input type="checkbox" value="Non-Smoker Vehicle"><span>🚭 Non-Smoker</span></label>
+          <label class="hl-check"><input type="checkbox" value="Custom Wheels / Rims"><span>🔧 Custom Rims</span></label>
+        </div>
+
+        <!-- CONTACT -->
+        <div style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--red);margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid var(--light)">📞 Contact Override (Optional)</div>
+        <div class="form-grid" style="margin-bottom:8px">
+          <div class="fg"><label>WhatsApp Number</label><input type="text" id="f-wa" placeholder="+966532877328 (leave blank for default)"></div>
+          <div class="fg"><label>Listing Agent Name</label><input type="text" id="f-agent" placeholder="e.g. Rohaan, Mikaeel..."></div>
+        </div>
+
+      </div>
+      <div class="form-actions">
+        <button class="btn-save" onclick="saveVehicle()">💾 Save & Publish Listing</button>
+        <button class="btn-reset" onclick="resetForm()">🔄 Clear Form</button>
+        <button class="btn-preview" onclick="switchTab('public')">👁️ Preview Public View</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MANAGE TAB ============ -->
+<div class="tab-content" id="tab-manage">
+  <div class="admin-header">
+    <h1>Manage Listings</h1>
+    <p>Edit, update status, or delete your vehicle listings</p>
+  </div>
+  <div class="manage-section">
+    <div class="card">
+      <div class="manage-tools">
+        <input class="search-box" type="text" id="manageSearch" placeholder="🔍 Search by make, model, year..." oninput="renderManage()">
+        <select class="filter-select" id="manageFilter" onchange="renderManage()">
+          <option value="">All Status</option>
+          <option value="active">Active</option>
+          <option value="pending">Pending</option>
+          <option value="sold">Sold</option>
+        </select>
+        <select class="filter-select" id="manageSort" onchange="renderManage()">
+          <option value="newest">Newest First</option>
+          <option value="oldest">Oldest First</option>
+          <option value="price-hi">Price High–Low</option>
+          <option value="price-lo">Price Low–High</option>
+        </select>
+        <span class="manage-count" id="manageCount">0 listings</span>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="listings-table">
+          <thead>
+            <tr>
+              <th>Photo</th>
+              <th>Vehicle</th>
+              <th>Year</th>
+              <th>Price</th>
+              <th>Type</th>
+              <th>Condition</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="manageTableBody"></tbody>
+        </table>
+        <div id="manageEmpty" class="empty-state" style="display:none">
+          <div class="icon">🚗</div>
+          <h3>No listings yet</h3>
+          <p>Click "Add Vehicle" to create your first listing</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ PUBLIC VIEW TAB ============ -->
+<div class="tab-content" id="tab-public">
+  <div class="pub-header">
+    <div>
+      <h1>Public Inventory — Live Preview</h1>
+      <p>This is exactly what visitors see on your website</p>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center">
+      <span id="pub-count-badge" style="background:rgba(200,16,46,0.8);color:white;font-size:12px;font-weight:700;padding:6px 14px;border-radius:50px">0 vehicles</span>
+    </div>
+  </div>
+  <div class="pub-filters">
+    <input class="pub-search" type="text" id="pubSearch" placeholder="🔍 Search make, model, year..." oninput="renderPublic()">
+    <select class="pub-fselect" id="pubType" onchange="renderPublic()"><option value="">All Types</option><option>SUV</option><option>Sedan</option><option>Hybrid</option><option>Pickup Truck</option><option>Heavy Machinery</option><option>Van / Minivan</option></select>
+    <select class="pub-fselect" id="pubCond" onchange="renderPublic()"><option value="">All Conditions</option><option>New</option><option>Used — Excellent</option><option>Used — Good</option></select>
+    <select class="pub-fselect" id="pubBrand" onchange="renderPublic()"><option value="">All Brands</option></select>
+    <select class="pub-fselect" id="pubSort" onchange="renderPublic()"><option value="newest">Newest First</option><option value="price-lo">Price: Low–High</option><option value="price-hi">Price: High–Low</option></select>
+  </div>
+  <div class="pub-results">
+    <div class="pub-results-header">
+      <span id="pubResultCount">Showing 0 vehicles</span>
+    </div>
+    <div class="pub-grid" id="pubGrid"></div>
+    <div id="pubEmpty" class="empty-state" style="display:none">
+      <div class="icon">🔍</div>
+      <h3>No vehicles found</h3>
+      <p>Try adjusting your search or filters</p>
+    </div>
+  </div>
+</div>
+
+<!-- ============ VEHICLE DETAIL MODAL ============ -->
+<div class="modal-overlay" id="detailModal" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-gallery">
+      <button class="modal-close" onclick="closeModalBtn()">✕</button>
+      <img id="modal-main-img" class="modal-main-img" src="" alt="Vehicle">
+      <div class="modal-thumbs" id="modal-thumbs"></div>
+    </div>
+    <div class="modal-body">
+      <div class="modal-info">
+        <div class="modal-make" id="modal-make"></div>
+        <div class="modal-title" id="modal-title"></div>
+        <div class="modal-desc" id="modal-desc"></div>
+        <table class="modal-specs-table" id="modal-specs"></table>
+        <div class="modal-highlights" id="modal-highlights"></div>
+      </div>
+      <div class="modal-sidebar">
+        <div class="modal-price" id="modal-price"></div>
+        <div class="modal-price-note" id="modal-pricenote"></div>
+        <div class="modal-actions">
+          <button class="modal-btn-primary" onclick="closeModalBtn();document.getElementById('tab-contact-wa').click()">📧 Send Inquiry</button>
+          <a class="modal-btn-wa" id="modal-wa-link" href="#" target="_blank">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+            WhatsApp — Inquire Now
+          </a>
+        </div>
+        <div class="modal-trust">
+          <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--mid);margin-bottom:10px">Assured By</div>
+          <p>✅ USA Registered Company<br>✅ Export Documentation<br>✅ CARFAX Available<br>✅ Secure Payment<br>✅ Worldwide Shipping</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM DIALOG -->
+<div class="confirm-overlay" id="confirmOverlay">
+  <div class="confirm-box">
+    <div style="font-size:40px;margin-bottom:12px">🗑️</div>
+    <h3>Delete this listing?</h3>
+    <p>This cannot be undone. The vehicle will be permanently removed.</p>
+    <div class="confirm-btns">
+      <button class="btn-confirm-yes" id="confirmYes">Yes, Delete</button>
+      <button class="btn-confirm-no" onclick="document.getElementById('confirmOverlay').classList.remove('open')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+const STORAGE_KEY = 'rmg_vehicles_v2';
+let vehicles = [];
+let uploadedImages = []; // base64
+let editingId = null;
+
+// ====== STORAGE ======
+function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(vehicles)); updateStats(); }
+function load() {
+  try { vehicles = JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch(e) { vehicles = []; }
+  updateStats();
+}
+
+// ====== STATS ======
+function updateStats() {
+  const total = vehicles.length;
+  const active = vehicles.filter(v=>v.status==='active').length;
+  const sold = vehicles.filter(v=>v.status==='sold').length;
+  const newV = vehicles.filter(v=>v.condition==='New').length;
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-active').textContent = active;
+  document.getElementById('stat-sold').textContent = sold;
+  document.getElementById('stat-new').textContent = newV;
+  document.getElementById('total-badge').textContent = total + ' Listed';
+  document.getElementById('pub-count-badge').textContent = active + ' vehicles';
+}
+
+// ====== TABS ======
+function switchTab(name) {
+  document.querySelectorAll('.tab-btn').forEach((b,i) => {
+    const names = ['add','manage','public'];
+    b.classList.toggle('active', names[i]===name);
+  });
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  if(name==='manage') renderManage();
+  if(name==='public') renderPublic();
+}
+
+// ====== IMAGE HANDLING ======
+function handleImages(input) {
+  const files = Array.from(input.files);
+  const promises = files.slice(0, 10 - uploadedImages.length).map(f => new Promise(res => {
+    const r = new FileReader();
+    r.onload = e => res(e.target.result);
+    r.readAsDataURL(f);
+  }));
+  Promise.all(promises).then(results => {
+    uploadedImages.push(...results);
+    renderImgPreviews();
+  });
+}
+
+function renderImgPreviews() {
+  const c = document.getElementById('imgPreviews');
+  c.innerHTML = uploadedImages.map((src,i) => `
+    <div class="img-preview-item">
+      <img src="${src}" alt="preview ${i+1}">
+      ${i===0?'<span class="img-primary-badge">COVER</span>':''}
+      <button class="del-img" onclick="removeImg(${i})" title="Remove">✕</button>
+    </div>
+  `).join('');
+}
+
+function removeImg(i) {
+  uploadedImages.splice(i,1);
+  renderImgPreviews();
+}
+
+// ====== SAVE / EDIT ======
+function getFormData() {
+  const make = document.getElementById('f-make').value;
+  const makeCustom = document.getElementById('f-make-custom').value.trim();
+  const finalMake = make==='Other' && makeCustom ? makeCustom : make;
+
+  // Collect URL images
+  const urlInput = document.getElementById('f-img-urls').value.trim();
+  const urlImgs = urlInput ? urlInput.split('\n').map(s=>s.trim()).filter(s=>s.startsWith('http')) : [];
+  const allImgs = [...uploadedImages, ...urlImgs];
+
+  // Collect highlights
+  const highlights = [];
+  document.querySelectorAll('.hl-check input:checked').forEach(cb => highlights.push(cb.value));
+
+  return {
+    id: editingId || Date.now(),
+    make: finalMake,
+    model: document.getElementById('f-model').value.trim(),
+    year: document.getElementById('f-year').value,
+    type: document.getElementById('f-type').value,
+    condition: document.getElementById('f-cond').value,
+    stock: document.getElementById('f-stock').value.trim(),
+    status: document.getElementById('f-status').value,
+    engine: document.getElementById('f-engine').value.trim(),
+    transmission: document.getElementById('f-trans').value,
+    drive: document.getElementById('f-drive').value,
+    mileage: document.getElementById('f-mileage').value.trim(),
+    fuel: document.getElementById('f-fuel').value,
+    color: document.getElementById('f-color').value.trim(),
+    interior: document.getElementById('f-interior').value.trim(),
+    doors: document.getElementById('f-doors').value,
+    seats: document.getElementById('f-seats').value.trim(),
+    price: document.getElementById('f-price').value.trim(),
+    priceType: document.getElementById('f-pricetype').value,
+    port: document.getElementById('f-port').value,
+    shipping: document.getElementById('f-shipping').value.trim(),
+    description: document.getElementById('f-desc').value.trim(),
+    highlights,
+    images: allImgs,
+    whatsapp: document.getElementById('f-wa').value.trim() || '+966532877328',
+    agent: document.getElementById('f-agent').value.trim(),
+    createdAt: editingId ? (vehicles.find(v=>v.id===editingId)||{}).createdAt || Date.now() : Date.now(),
+    updatedAt: Date.now()
+  };
+}
+
+function saveVehicle() {
+  const data = getFormData();
+  if(!data.make || !data.model || !data.year) { showToast('❌ Please fill in Make, Model, and Year', 'error'); return; }
+  if(!data.price) { showToast('❌ Please enter a price', 'error'); return; }
+
+  if(editingId) {
+    const idx = vehicles.findIndex(v=>v.id===editingId);
+    if(idx>-1) vehicles[idx] = data;
+    editingId = null;
+    document.querySelector('.card-header .badge').textContent = 'New Listing';
+    document.querySelector('.card-header h2').textContent = 'Vehicle Information';
+    showToast('✅ Listing updated successfully!', 'success');
+  } else {
+    vehicles.unshift(data);
+    showToast('🚗 Vehicle published successfully!', 'success');
+  }
+  save();
+  resetForm();
+}
+
+function resetForm() {
+  ['f-make','f-make-custom','f-model','f-year','f-type','f-cond','f-stock','f-engine','f-trans','f-drive','f-mileage','f-fuel','f-color','f-interior','f-doors','f-seats','f-price','f-desc','f-wa','f-agent','f-img-urls'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.value = '';
+  });
+  document.querySelectorAll('.hl-check input').forEach(cb => cb.checked=false);
+  uploadedImages = [];
+  renderImgPreviews();
+  document.getElementById('f-status').value = 'active';
+  document.getElementById('f-pricetype').value = 'EXW (Ex Works USA)';
+  editingId = null;
+  document.querySelector('.card-header .badge').textContent = 'New Listing';
+  document.querySelector('.card-header h2').textContent = 'Vehicle Information';
+}
+
+function editVehicle(id) {
+  const v = vehicles.find(x=>x.id===id);
+  if(!v) return;
+  editingId = id;
+  switchTab('add');
+  document.querySelector('.card-header h2').textContent = 'Edit Listing';
+  document.querySelector('.card-header .badge').textContent = 'Editing';
+
+  // Fill form
+  const makeSel = document.getElementById('f-make');
+  const isStandardMake = Array.from(makeSel.options).some(o=>o.value===v.make);
+  if(isStandardMake) { makeSel.value = v.make; } else { makeSel.value='Other'; document.getElementById('f-make-custom').value=v.make; }
+  document.getElementById('f-model').value = v.model||'';
+  document.getElementById('f-year').value = v.year||'';
+  document.getElementById('f-type').value = v.type||'';
+  document.getElementById('f-cond').value = v.condition||'';
+  document.getElementById('f-stock').value = v.stock||'';
+  document.getElementById('f-status').value = v.status||'active';
+  document.getElementById('f-engine').value = v.engine||'';
+  document.getElementById('f-trans').value = v.transmission||'';
+  document.getElementById('f-drive').value = v.drive||'';
+  document.getElementById('f-mileage').value = v.mileage||'';
+  document.getElementById('f-fuel').value = v.fuel||'';
+  document.getElementById('f-color').value = v.color||'';
+  document.getElementById('f-interior').value = v.interior||'';
+  document.getElementById('f-doors').value = v.doors||'';
+  document.getElementById('f-seats').value = v.seats||'';
+  document.getElementById('f-price').value = v.price||'';
+  document.getElementById('f-pricetype').value = v.priceType||'EXW (Ex Works USA)';
+  document.getElementById('f-port').value = v.port||'Houston, TX';
+  document.getElementById('f-shipping').value = v.shipping||'';
+  document.getElementById('f-desc').value = v.description||'';
+  document.getElementById('f-wa').value = v.whatsapp!=='+966532877328'?v.whatsapp:'';
+  document.getElementById('f-agent').value = v.agent||'';
+  document.querySelectorAll('.hl-check input').forEach(cb => { cb.checked = (v.highlights||[]).includes(cb.value); });
+  uploadedImages = (v.images||[]).filter(i=>i.startsWith('data:'));
+  document.getElementById('f-img-urls').value = (v.images||[]).filter(i=>i.startsWith('http')).join('\n');
+  renderImgPreviews();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+let pendingDeleteId = null;
+function deleteVehicle(id) {
+  pendingDeleteId = id;
+  document.getElementById('confirmOverlay').classList.add('open');
+  document.getElementById('confirmYes').onclick = () => {
+    vehicles = vehicles.filter(v=>v.id!==id);
+    save();
+    renderManage();
+    document.getElementById('confirmOverlay').classList.remove('open');
+    showToast('🗑️ Listing deleted', 'success');
+  };
+}
+
+function toggleStatus(id) {
+  const v = vehicles.find(x=>x.id===id);
+  if(!v) return;
+  if(v.status==='active') v.status='sold';
+  else if(v.status==='sold') v.status='active';
+  else v.status='active';
+  save();
+  renderManage();
+  showToast(`Status updated to ${v.status}`, 'success');
+}
+
+// ====== MANAGE RENDER ======
+function renderManage() {
+  const search = document.getElementById('manageSearch').value.toLowerCase();
+  const filter = document.getElementById('manageFilter').value;
+  const sort = document.getElementById('manageSort').value;
+  let list = vehicles.filter(v => {
+    const match = [v.make,v.model,v.year,v.type,v.color].join(' ').toLowerCase().includes(search);
+    const statusMatch = !filter || v.status===filter;
+    return match && statusMatch;
+  });
+  if(sort==='oldest') list.sort((a,b)=>a.createdAt-b.createdAt);
+  else if(sort==='price-hi') list.sort((a,b)=>parsePrice(b.price)-parsePrice(a.price));
+  else if(sort==='price-lo') list.sort((a,b)=>parsePrice(a.price)-parsePrice(b.price));
+  else list.sort((a,b)=>b.createdAt-a.createdAt);
+
+  document.getElementById('manageCount').textContent = `${list.length} listing${list.length!==1?'s':''}`;
+  const tbody = document.getElementById('manageTableBody');
+  const empty = document.getElementById('manageEmpty');
+  if(list.length===0) { tbody.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  tbody.innerHTML = list.map(v => {
+    const img = v.images&&v.images.length ? `<img class="tbl-img" src="${v.images[0]}" alt="${v.make} ${v.model}" onerror="this.style.display='none';this.nextSibling.style.display='flex'"><div class="tbl-img-placeholder" style="display:none">🚗</div>` : `<div class="tbl-img-placeholder">🚗</div>`;
+    const statusClass = {active:'status-active',sold:'status-sold',pending:'status-pending'}[v.status]||'status-active';
+    const statusLabel = {active:'Active',sold:'Sold',pending:'Pending'}[v.status]||v.status;
+    const priceDisp = v.price ? (v.price.startsWith('$')?v.price:'$'+v.price) : 'N/A';
+    return `<tr>
+      <td>${img}</td>
+      <td><div class="car-title-cell"><strong>${v.make} ${v.model}</strong><span>${v.stock||'—'}</span></div></td>
+      <td>${v.year||'—'}</td>
+      <td style="font-weight:600">${priceDisp}</td>
+      <td>${v.type||'—'}</td>
+      <td>${(v.condition||'—').replace('Used — ','')}</td>
+      <td><span class="status-badge ${statusClass}">${statusLabel}</span></td>
+      <td><div class="tbl-actions">
+        <button class="btn-edit" onclick="editVehicle(${v.id})">✏️ Edit</button>
+        <button class="btn-toggle" onclick="toggleStatus(${v.id})">${v.status==='active'?'Mark Sold':'Reactivate'}</button>
+        <button class="btn-delete" onclick="deleteVehicle(${v.id})">🗑️</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+// ====== PUBLIC RENDER ======
+function renderPublic() {
+  const search = document.getElementById('pubSearch').value.toLowerCase();
+  const type = document.getElementById('pubType').value;
+  const cond = document.getElementById('pubCond').value;
+  const brand = document.getElementById('pubBrand').value;
+  const sort = document.getElementById('pubSort').value;
+
+  // Populate brand filter
+  const brands = [...new Set(vehicles.map(v=>v.make).filter(Boolean))].sort();
+  const brandSel = document.getElementById('pubBrand');
+  const curBrand = brandSel.value;
+  brandSel.innerHTML = '<option value="">All Brands</option>' + brands.map(b=>`<option${b===curBrand?' selected':''}>${b}</option>`).join('');
+
+  let list = vehicles.filter(v => {
+    if(v.status==='sold') return false; // hide sold from public by default
+    const q = [v.make,v.model,v.year,v.type,v.color,v.engine].join(' ').toLowerCase();
+    if(search && !q.includes(search)) return false;
+    if(type && v.type!==type) return false;
+    if(cond && v.condition!==cond) return false;
+    if(brand && v.make!==brand) return false;
+    return true;
+  });
+  if(sort==='price-lo') list.sort((a,b)=>parsePrice(a.price)-parsePrice(b.price));
+  else if(sort==='price-hi') list.sort((a,b)=>parsePrice(b.price)-parsePrice(a.price));
+  else list.sort((a,b)=>b.createdAt-a.createdAt);
+
+  document.getElementById('pubResultCount').textContent = `Showing ${list.length} vehicle${list.length!==1?'s':''}`;
+  const grid = document.getElementById('pubGrid');
+  const empty = document.getElementById('pubEmpty');
+  if(list.length===0) { grid.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  const condBadge = c => c==='New'?'new':c?'used':'used';
+  const condLabel = c => c==='New'?'New':c?c.replace('Used — ','Used'):'-';
+  grid.innerHTML = list.map(v => {
+    const img = v.images&&v.images.length ? `<img src="${v.images[0]}" alt="${v.make} ${v.model}" loading="lazy" onerror="this.style.display='none'">` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#e8e8e8;font-size:48px">🚗</div>`;
+    const priceDisp = v.price ? (v.price.startsWith('$')?v.price:'$'+v.price) : 'Contact for Price';
+    const extras = [v.engine,v.transmission,v.mileage,v.fuel].filter(Boolean);
+    const imgCount = v.images&&v.images.length>1?`<div class="pub-card-imgs-count">📷 ${v.images.length}</div>`:'';
+    return `<div class="pub-card" onclick="openModal(${v.id})">
+      <div class="pub-card-img">
+        ${img}${imgCount}
+        <span class="pub-badge ${condBadge(v.condition)}">${condLabel(v.condition)}</span>
+      </div>
+      <div class="pub-card-body">
+        <div class="pub-card-make">${v.make||''} · ${v.year||''}</div>
+        <div class="pub-card-name">${v.model||'Vehicle'}</div>
+        <div class="pub-specs">${extras.slice(0,3).map(s=>`<span class="pub-spec">${s}</span>`).join('')}</div>
+        <div class="pub-card-footer">
+          <div class="pub-price">${priceDisp}<br><small>${v.priceType||''}</small></div>
+          <a class="pub-wa" href="https://wa.me/${(v.whatsapp||'+966532877328').replace(/\D/g,'')}?text=Hi%2C+I%27m+interested+in+the+${encodeURIComponent((v.year||'')+' '+(v.make||'')+' '+(v.model||''))}" target="_blank" onclick="event.stopPropagation()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+            WhatsApp
+          </a>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ====== MODAL ======
+function openModal(id) {
+  const v = vehicles.find(x=>x.id===id);
+  if(!v) return;
+  const imgs = v.images&&v.images.length ? v.images : ['https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=800'];
+  document.getElementById('modal-main-img').src = imgs[0];
+  document.getElementById('modal-make').textContent = `${v.make||''} · ${v.year||''} · ${v.type||''}`;
+  document.getElementById('modal-title').textContent = v.model||'Vehicle';
+  document.getElementById('modal-desc').textContent = v.description||'Contact us for full details on this vehicle.';
+  const priceDisp = v.price ? (v.price.startsWith('$')?v.price:'$'+v.price) : 'Contact for Price';
+  document.getElementById('modal-price').textContent = priceDisp;
+  document.getElementById('modal-pricenote').textContent = (v.priceType||'') + (v.shipping ? ' · Shipping: '+v.shipping : '');
+  
+  const specs = [
+    ['Engine', v.engine], ['Transmission', v.transmission], ['Drive', v.drive],
+    ['Mileage', v.mileage], ['Fuel', v.fuel], ['Color', v.color],
+    ['Interior', v.interior], ['Doors', v.doors], ['Seats', v.seats],
+    ['Condition', v.condition], ['Shipping Port', v.port], ['Stock #', v.stock]
+  ].filter(([,val])=>val);
+  document.getElementById('modal-specs').innerHTML = specs.map(([k,val])=>`<tr><td>${k}</td><td>${val}</td></tr>`).join('');
+  document.getElementById('modal-highlights').innerHTML = (v.highlights||[]).map(h=>`<span class="modal-hl">${h}</span>`).join('');
+  
+  const thumbs = document.getElementById('modal-thumbs');
+  thumbs.innerHTML = imgs.map((src,i)=>`<img class="modal-thumb${i===0?' active':''}" src="${src}" onclick="setMainImg('${src}',this)" alt="thumb">`).join('');
+
+  const waNum = (v.whatsapp||'+966532877328').replace(/\D/g,'');
+  document.getElementById('modal-wa-link').href = `https://wa.me/${waNum}?text=Hi%2C+I%27m+interested+in+the+${encodeURIComponent((v.year||'')+' '+(v.make||'')+' '+(v.model||''))}`;
+  
+  document.getElementById('detailModal').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+
+function setMainImg(src, el) {
+  document.getElementById('modal-main-img').src = src;
+  document.querySelectorAll('.modal-thumb').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function closeModal(e) { if(e.target===document.getElementById('detailModal')) closeModalBtn(); }
+function closeModalBtn() { document.getElementById('detailModal').classList.remove('open'); document.body.style.overflow=''; }
+
+// ====== UTILS ======
+function parsePrice(p) {
+  if(!p) return 0;
+  return parseInt(p.replace(/[^0-9]/g,''))||0;
+}
+
+function showToast(msg, type='success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + type;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+// ====== INIT ======
+load();
+renderManage();
+renderPublic();
+</script>
+</body>
+</html>
